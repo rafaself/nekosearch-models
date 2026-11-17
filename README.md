@@ -75,7 +75,7 @@ pnpm test
 
 Run from the repository root with Node.js and pnpm versions pinned in `.nvmrc` and `package.json`. The preparation script downloads the four pinned upstream files, checks their size and SHA-256, and writes the release files to a new directory under `.artifacts/`. Pass a path as the first argument to use a different new output directory. Model weights are stored exclusively in GitHub Release assets for distribution.
 
-For a new model version, update the manifest and versioned download links, then push the matching tag after validation. GitHub Actions tests the model with remote loading disabled, rebuilds the files from the pinned sources, verifies GitHub's uploaded asset digests, and publishes the draft only when release immutability is enabled.
+For a new model version, update the manifest and versioned download links, then push the matching tag after validation. Keep release immutability enabled in the repository settings. GitHub Actions tests the model with remote loading disabled, rebuilds the files from the pinned sources, verifies GitHub's uploaded asset digests, and checks the immutable flag after publication. Run the workflow manually from the default branch with an existing tag to retry publication.
 
 ## Provenance and license
 

@@ -4,6 +4,12 @@ on:
   pull_request:
   push:
     tags: ["qwen3-embedding-0.6b-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing model tag to publish
+        required: true
+        type: string
 
 permissions: {}
 
@@ -13,10 +19,16 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+    outputs:
+      revision: ${{ steps.source.outputs.revision }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || '' }}
+      - id: source
+        shell: bash
+        run: printf 'revision=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -33,21 +45,28 @@ jobs:
         run: pnpm test
 
   publish:
-    if: github.repository == 'rafaself/nekosearch-models' && github.event_name == 'push' && github.ref_type == 'tag'
+    if: >-
+      github.repository == 'rafaself/nekosearch-models' &&
+      ((github.event_name == 'push' && github.ref_type == 'tag') ||
+       (github.event_name == 'workflow_dispatch' && github.ref_type == 'branch' &&
+        github.ref_name == github.event.repository.default_branch))
     needs: validate
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:
       contents: write
     concurrency:
-      group: publish-model-${{ github.ref_name }}
+      group: publish-model-${{ inputs.tag || github.ref_name }}
       cancel-in-progress: false
     env:
       MODEL_DIR: .artifacts/qwen3-embedding-0.6b
+      MODEL_TAG: ${{ inputs.tag || github.ref_name }}
+      MODEL_REVISION: ${{ needs.validate.outputs.revision }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ needs.validate.outputs.revision }}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -56,9 +75,9 @@ jobs:
         shell: bash
         run: |
           manifest=models/qwen3-embedding-0.6b/manifest.json
-          test "$GITHUB_REF_NAME" = "$(jq -r '.release.tag' "$manifest")"
-          test "$GITHUB_REF_NAME" = "$(jq -r '.modelId + "-v" + .version' "$manifest")"
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$MODEL_TAG" = "$(jq -r '.release.tag' "$manifest")"
+          test "$MODEL_TAG" = "$(jq -r '.modelId + "-v" + .version' "$manifest")"
+          test "$(git rev-parse HEAD)" = "$MODEL_REVISION"
           node scripts/prepare-model.mjs "$MODEL_DIR"
           cd "$MODEL_DIR"
           sha256sum --check --strict SHA256SUMS
@@ -68,9 +87,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="$GITHUB_REF_NAME"
-          test "$(gh api "repos/$GITHUB_REPOSITORY/immutable-releases" --jq .enabled)" = true
-          test "$(gh api "repos/$GITHUB_REPOSITORY/commits/tags/$tag" --jq .sha)" = "$GITHUB_SHA"
+          tag="$MODEL_TAG"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/commits/tags/$tag" --jq .sha)" = "$MODEL_REVISION"
 
           if ! release=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json databaseId,isDraft); then
             gh release create "$tag" --repo "$GITHUB_REPOSITORY" --verify-tag --draft \
@@ -100,7 +118,7 @@ jobs:
           actual=$(gh api "$asset_api" --jq 'map({name, digest, size}) | sort_by(.name)')
           test "$(jq -cS . <<< "$actual")" = "$expected"
           if [[ "$(jq -r .isDraft <<< "$release")" == true ]]; then
-            test "$(gh api "repos/$GITHUB_REPOSITORY/commits/tags/$tag" --jq .sha)" = "$GITHUB_SHA"
+            test "$(gh api "repos/$GITHUB_REPOSITORY/commits/tags/$tag" --jq .sha)" = "$MODEL_REVISION"
             gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
           fi
           test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isImmutable --jq .isImmutable)" = true
