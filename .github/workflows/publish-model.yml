@@ -1,0 +1,106 @@
+name: Validate and publish model
+
+on:
+  pull_request:
+  push:
+    tags: ["qwen3-embedding-0.6b-v*"]
+
+permissions: {}
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - run: npm install --global pnpm@12.6.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: node scripts/prepare-model.mjs
+      - name: Verify artifact checksums
+        working-directory: .artifacts/qwen3-embedding-0.6b
+        run: sha256sum --check --strict SHA256SUMS
+      - name: Run offline CPU inference
+        run: pnpm test
+
+  publish:
+    if: github.repository == 'rafaself/nekosearch-models' && github.event_name == 'push' && github.ref_type == 'tag'
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-model-${{ github.ref_name }}
+      cancel-in-progress: false
+    env:
+      MODEL_DIR: .artifacts/qwen3-embedding-0.6b
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Prepare release files
+        shell: bash
+        run: |
+          manifest=models/qwen3-embedding-0.6b/manifest.json
+          test "$GITHUB_REF_NAME" = "$(jq -r '.release.tag' "$manifest")"
+          test "$GITHUB_REF_NAME" = "$(jq -r '.modelId + "-v" + .version' "$manifest")"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          node scripts/prepare-model.mjs "$MODEL_DIR"
+          cd "$MODEL_DIR"
+          sha256sum --check --strict SHA256SUMS
+      - name: Verify uploads and publish the immutable release
+        shell: bash
+        working-directory: .artifacts/qwen3-embedding-0.6b
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/immutable-releases" --jq .enabled)" = true
+          test "$(gh api "repos/$GITHUB_REPOSITORY/commits/tags/$tag" --jq .sha)" = "$GITHUB_SHA"
+
+          if ! release=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json databaseId,isDraft); then
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --verify-tag --draft \
+              --title "Qwen3-Embedding-0.6B $(jq -r .version manifest.json)" \
+              --notes "Qwen3-Embedding-0.6B ONNX for NekoSearch. See manifest.json for provenance and runtime configuration, NOTICE for attribution, and SHA256SUMS for verification."
+            release=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json databaseId,isDraft)
+          fi
+
+          asset_api="repos/$GITHUB_REPOSITORY/releases/$(jq -r .databaseId <<< "$release")/assets"
+          expected=$(
+            for file in *; do
+              digest=$(sha256sum -- "$file" | cut -d ' ' -f 1)
+              jq -cn --arg name "$file" --arg digest "sha256:$digest" \
+                --argjson size "$(stat -c %s -- "$file")" '{name:$name, digest:$digest, size:$size}'
+            done | jq -csS 'sort_by(.name)'
+          )
+
+          if [[ "$(jq -r .isDraft <<< "$release")" == true ]]; then
+            assets=$(gh api "$asset_api")
+            for file in *; do
+              if ! jq -e --arg name "$file" 'any(.[]; .name == $name)' <<< "$assets" > /dev/null; then
+                gh release upload "$tag" "$file" --repo "$GITHUB_REPOSITORY"
+              fi
+            done
+          fi
+
+          actual=$(gh api "$asset_api" --jq 'map({name, digest, size}) | sort_by(.name)')
+          test "$(jq -cS . <<< "$actual")" = "$expected"
+          if [[ "$(jq -r .isDraft <<< "$release")" == true ]]; then
+            test "$(gh api "repos/$GITHUB_REPOSITORY/commits/tags/$tag" --jq .sha)" = "$GITHUB_SHA"
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
+          fi
+          test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isImmutable --jq .isImmutable)" = true

@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "modelId": "qwen3-embedding-0.6b",
+  "version": "1.0.0",
+  "release": {
+    "repository": "rafaself/nekosearch-models",
+    "tag": "qwen3-embedding-0.6b-v1.0.0",
+    "checksums": "SHA256SUMS"
+  },
+  "upstream": {
+    "repository": "onnx-community/Qwen3-Embedding-0.6B-ONNX",
+    "revision": "c25a394dd583836952667c12f008335071b3f43d",
+    "modelCard": "https://huggingface.co/onnx-community/Qwen3-Embedding-0.6B-ONNX/blob/c25a394dd583836952667c12f008335071b3f43d/README.md",
+    "originalModel": "Qwen/Qwen3-Embedding-0.6B",
+    "originalModelCard": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B/blob/97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3/README.md"
+  },
+  "model": {
+    "architecture": "Qwen3Model",
+    "format": "onnx",
+    "contextLength": 32768,
+    "embeddingDimensions": 1024,
+    "pooling": "last_token",
+    "normalization": "l2"
+  },
+  "tokenizer": {
+    "class": "Qwen2Tokenizer",
+    "algorithm": "BPE",
+    "files": ["tokenizer.json", "tokenizer_config.json"],
+    "paddingSide": "left",
+    "padToken": "<|endoftext|>",
+    "eosToken": "<|im_end|>"
+  },
+  "runtime": {
+    "package": "@huggingface/transformers",
+    "version": "4.3.2",
+    "onnxruntimeNodeVersion": "1.30.0",
+    "nodeVersion": "24.22.2",
+    "platform": "linux",
+    "architecture": "x64",
+    "task": "feature-extraction",
+    "device": "cpu",
+    "dtype": "q8",
+    "subfolder": "",
+    "externalData": false,
+    "recommendedBatchSize": 1
+  },
+  "license": {
+    "spdxId": "Apache-2.0",
+    "file": "Apache-2.0.txt",
+    "notice": "NOTICE",
+    "originalAuthor": "Qwen Team, Alibaba Cloud",
+    "conversionAuthor": "Xenova, ONNX Community",
+    "conversionSource": "https://huggingface.co/onnx-community/Qwen3-Embedding-0.6B-ONNX/discussions/1",
+    "conversionLicenseBasis": "Xenova states that his quantizations follow the original model license. The pinned conversion repository has no separate license declaration.",
+    "conversionLicenseEvidence": "https://huggingface.co/Xenova/bge-m3/discussions/9"
+  },
+  "artifacts": [
+    {
+      "name": "config.json",
+      "upstreamPath": "config.json",
+      "requiredForInference": true,
+      "sizeBytes": 1576,
+      "sha256": "66a10929782f3c9a3cd5dec90e2a95c60e05736134a63cd54479eeae80bed175"
+    },
+    {
+      "name": "tokenizer.json",
+      "upstreamPath": "tokenizer.json",
+      "requiredForInference": true,
+      "sizeBytes": 11423705,
+      "sha256": "def76fb086971c7867b829c23a26261e38d9d74e02139253b38aeb9df8b4b50a"
+    },
+    {
+      "name": "tokenizer_config.json",
+      "upstreamPath": "tokenizer_config.json",
+      "requiredForInference": true,
+      "sizeBytes": 9731,
+      "sha256": "977648852447cb6587327ff3205b0a84cf2fc9f05621d6c8e88a497caafab2e1"
+    },
+    {
+      "name": "model_quantized.onnx",
+      "upstreamPath": "onnx/model_quantized.onnx",
+      "requiredForInference": true,
+      "sizeBytes": 613527631,
+      "sha256": "87cd124e0ef1fd1f223ebc283efccbaeac386d0b08344701c46975d0657b591f"
+    },
+    {
+      "name": "Apache-2.0.txt",
+      "repositoryPath": "licenses/Apache-2.0.txt",
+      "requiredForInference": false,
+      "sizeBytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "name": "NOTICE",
+      "repositoryPath": "NOTICE",
+      "requiredForInference": false,
+      "sizeBytes": 774,
+      "sha256": "7824806b9b841b51f158d86baeaea8f113cd83f9001440336cb32787d400a717"
+    }
+  ]
+}

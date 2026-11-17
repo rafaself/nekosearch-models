@@ -1,0 +1,15 @@
+Qwen3-Embedding-0.6B model distribution
+
+Original model by the Qwen Team at Alibaba Cloud.
+https://huggingface.co/Qwen/Qwen3-Embedding-0.6B
+The Qwen model card declares the Apache License, Version 2.0.
+
+ONNX conversion and quantization by Xenova for ONNX Community.
+https://huggingface.co/onnx-community/Qwen3-Embedding-0.6B-ONNX/tree/c25a394dd583836952667c12f008335071b3f43d
+Xenova states that his quantizations follow the original model's license.
+https://huggingface.co/Xenova/bge-m3/discussions/9
+
+NekoSearch redistributes the selected upstream model, configuration and
+tokenizer files byte-for-byte. The release includes the Apache 2.0 license
+text as Apache-2.0.txt. The MIT LICENSE in this repository applies to the
+NekoSearch distribution tooling and documentation.

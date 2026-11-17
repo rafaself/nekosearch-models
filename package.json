@@ -1,0 +1,19 @@
+{
+  "name": "nekosearch-models",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "packageManager": "pnpm@12.6.0",
+  "scripts": {
+    "format": "prettier --write .",
+    "lint": "prettier --check .",
+    "typecheck": "tsc --noEmit --allowJs --checkJs --module nodenext --target es2024 --lib es2024 --strict --skipLibCheck scripts/*.mjs",
+    "test": "node --test scripts/model.test.mjs"
+  },
+  "devDependencies": {
+    "@huggingface/transformers": "4.3.2",
+    "@types/node": "24.19.2",
+    "prettier": "3.10.1",
+    "typescript": "6.0.3"
+  }
+}
