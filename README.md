@@ -1,6 +1,6 @@
 # NekoSearch models
 
-Official model downloads for [NekoSearch](https://github.com/rafaself/neko-search).
+Official model downloads for [NekoSearch](https://github.com/rafaself/nekosearch).
 Each version is published as an immutable GitHub Release with a manifest, SHA-256 checksums, and license and attribution files.
 
 | Model                | Release                                                                                          | Runtime                               |
